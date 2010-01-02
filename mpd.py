@@ -200,14 +200,20 @@ class MPDProtocol(basic.LineReceiver):
             yield obj
 
     def parse_object(self, lines):
-        objs = self.parse_objects
+        objs = list(self.parse_objects(lines))
         if not objs:
             return {}
         return objs[0]
 
+    def parse_item(self, lines):
+        objs = list(self.parse_pairs(lines))
+        if len(pairs) != 1:
+            return
+        return pairs[0][1]
+    
     def parse_nothing(self, lines):
         pass
-            
+    
     def parse_songs(self, lines):
         return self.parse_objects(lines, ["file"])
 
