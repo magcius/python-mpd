@@ -199,6 +199,12 @@ class MPDProtocol(basic.LineReceiver):
         if obj:
             yield obj
 
+    def parse_object(self, lines):
+        objs = self.parse_objects
+        if not objs:
+            return {}
+        return objs[0]
+
     def parse_nothing(self, lines):
         pass
             
