@@ -131,18 +131,28 @@ class MPDProtocol(basic.LineReceiver):
         except KeyError:
             raise AttributeError("'%s' object has no attribute '%s'" %
                                  (self.__class__.__name__, attr))
-        return lambda *args: self.execute(attr, args, parser)
+        return lambda *args, **kwargs: self.execute(attr, args, parser, kwargs.get("blocking", False))
 
-    def execute(self, command, args, parser):
+    def execute(self, command, args, parser, blocking):
         if self.command_list is not None and not callable(parser):
             raise CommandListError("%s not allowed in command list" % command)
         self.write_command(command, args)
         deferred = defer.Deferred()
         self.state.append(deferred)
         if parser is not None:
-            defferred.addCallback(parser)
-            deferred.addCallback(self.wrap_iterator)
             deferred.addCallback(parser)
+            deferred.addCallback(self.wrap_iterator)
+        
+        if blocking:
+            running = True
+            def block_callback(data):
+                running = False
+                return data
+            deferred.addCallback(block_callback)
+            while running:
+                continue
+            return deferred.result
+        else:
             return deferred
 
     def wrap_iterator(self, iterator):
@@ -188,6 +198,9 @@ class MPDProtocol(basic.LineReceiver):
                 obj[key] = value
         if obj:
             yield obj
+
+    def parse_nothing(self, lines):
+        pass
             
     def parse_songs(self, lines):
         return self.parse_objects(lines, ["file"])
@@ -249,6 +262,10 @@ def escape(text):
     return text.replace("\\", "\\\\").replace('"', '\\"')    
 
 class MPDFactory(protocol.ClientFactory):
-    protocol = MPDProtocol
+    
+    def buildProtocol(self):
+        self.client = MPDProtocol()
+        self.client.factory = self
+        return self.client
 
 # vim: set expandtab shiftwidth=4 softtabstop=4 textwidth=79:
