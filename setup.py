@@ -3,8 +3,8 @@
 from distutils.core import setup
 
 
-DESCRIPTION = """\
-An MPD (Music Player Daemon) client library written in pure Python.\
+DESCRIPTION = """
+An MPD (Music Player Daemon) client library written in pure Python, using Twisted
 """
 
 CLASSIFIERS = [
@@ -31,19 +31,19 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with this program.  If not, see <http://www.gnu.org/licenses/>.\
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
 
 setup(
-    name="python-mpd",
+    name="python-mpd-twisted",
     version="0.2.1",
-    description="Python MPD client library",
+    description="Python MPD client library using Twisted",
     long_description=DESCRIPTION,
-    author="J. Alexander Treuman",
-    author_email="jat@spatialrift.net",
-    url="http://www.musicpd.org/~jat/python-mpd/",
-    download_url="http://pypi.python.org/pypi/python-mpd/",
+    author="J. Alexander Treuman, JP St. Pierre",
+    author_email="jat@spatialrift.net, jstpierre@mecheye.net",
+    url="http://github.com/magcius/python-mpd",
+    download_url="http://github.com/magcius/python-mpd",
     py_modules=["mpd"],
     classifiers=CLASSIFIERS,
     #license=LICENSE,
