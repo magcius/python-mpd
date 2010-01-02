@@ -40,7 +40,6 @@ class CommandError(MPDError):
 class CommandListError(MPDError):
     pass
 
-
 class MPDProtocol(basic.LineReceiver):
     def __init__(self):
         self.iterate = False
@@ -247,7 +246,9 @@ class MPDProtocol(basic.LineReceiver):
             self.buffer.append(line)
 
 def escape(text):
-    return text.replace("\\", "\\\\").replace('"', '\\"')
+    return text.replace("\\", "\\\\").replace('"', '\\"')    
 
+class MPDFactory(protocol.ClientFactory):
+    protocol = MPDProtocol
 
 # vim: set expandtab shiftwidth=4 softtabstop=4 textwidth=79:
