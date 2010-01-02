@@ -263,7 +263,7 @@ def escape(text):
 
 class MPDFactory(protocol.ClientFactory):
     
-    def buildProtocol(self):
+    def buildProtocol(self, addr):
         self.client = MPDProtocol()
         self.client.factory = self
         return self.client
