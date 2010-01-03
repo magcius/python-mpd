@@ -17,6 +17,11 @@
 # import socket
 from twisted.internet import protocol, reactor, defer
 from twisted.protocols import basic
+from twisted.python.log import startLogging
+
+import sys
+
+startLogging(sys.stdout)
 
 HELLO_PREFIX = "OK MPD "
 ERROR_PREFIX = "ACK "
@@ -133,19 +138,9 @@ class MPDProtocol(basic.LineReceiver):
         except KeyError:
             raise AttributeError("'%s' object has no attribute '%s'" %
                                  (self.__class__.__name__, attr))
-        return lambda *args, **kwargs: self.execute(attr, args, parser, kwargs.get("blocking", False))
+        return lambda *args: self.execute(attr, args, parser)
     
-    def execute(self, command, args, parser, blocking):
-        if blocking:
-            return self.execute_blocking(command, args, parser)
-        else:
-            return self.execute_nonblocking(command, args, parser)
-
-    @defer.inlineCallbacks
-    def execute_blocking(self, command, args, parser):
-        defer.returnValue((yield self.execute_nonblocking(command, args, parser)))
-    
-    def execute_nonblocking(self, command, args, parser):
+    def execute(self, command, args, parser):
         if self.command_list is not None and not callable(parser):
             raise CommandListError("%s not allowed in command list" % command)
         self.write_command(command, args)
@@ -158,6 +153,7 @@ class MPDProtocol(basic.LineReceiver):
     def write_command(self, command, args=[]):
         parts = [command]
         parts += ['"%s"' % escape(str(arg)) for arg in args]
+        print "sending", parts
         self.sendLine(" ".join(parts))
     
     def parse_pairs(self, lines, separator=": "):
@@ -247,6 +243,7 @@ class MPDProtocol(basic.LineReceiver):
         self.buffer = []
 
     def lineReceived(self, line):
+        print "received", line
         if line.startswith(HELLO_PREFIX):
             self.mpd_version = line[len(HELLO_PREFIX):].strip()
         
