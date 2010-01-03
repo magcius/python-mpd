@@ -136,6 +136,16 @@ class MPDProtocol(basic.LineReceiver):
         return lambda *args, **kwargs: self.execute(attr, args, parser, kwargs.get("blocking", False))
     
     def execute(self, command, args, parser, blocking):
+        if blocking:
+            return self.execute_blocking(command, args, parser)
+        else:
+            return self.execute_nonblocking(command, args, parser)
+
+    @defer.inlineCallbacks
+    def execute_blocking(self, command, args, parser):
+        defer.returnValue((yield self.execute_nonblocking(command, args, parser)))
+    
+    def execute_nonblocking(self, command, args, parser):
         if self.command_list is not None and not callable(parser):
             raise CommandListError("%s not allowed in command list" % command)
         self.write_command(command, args)
@@ -143,17 +153,7 @@ class MPDProtocol(basic.LineReceiver):
         self.state.append(deferred)
         if parser is not None:
             deferred.addCallback(parser)
-        
-        if blocking:
-            finished = [None]
-            def block_callback(data):
-                finished[0] = data
-            deferred.addCallback(block_callback)
-            while not finished[0]:
-                reactor.iterate(0.5)
-            return finished[0]
-        else:
-            return deferred
+        return deferred
     
     def write_command(self, command, args=[]):
         parts = [command]
