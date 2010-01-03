@@ -18,7 +18,6 @@
 from twisted.internet import protocol, reactor, defer
 from twisted.protocols import basic
 
-
 HELLO_PREFIX = "OK MPD "
 ERROR_PREFIX = "ACK "
 SUCCESS = "OK"
@@ -41,8 +40,11 @@ class CommandListError(MPDError):
     pass
 
 class MPDProtocol(basic.LineReceiver):
+
+    delimiter = "\n"
+    
     def __init__(self):
-        self.iterate = False
+        self.iterate = True
         self.reset()
         self.state = []
         self.commands = {
@@ -132,7 +134,7 @@ class MPDProtocol(basic.LineReceiver):
             raise AttributeError("'%s' object has no attribute '%s'" %
                                  (self.__class__.__name__, attr))
         return lambda *args, **kwargs: self.execute(attr, args, parser, kwargs.get("blocking", False))
-
+    
     def execute(self, command, args, parser, blocking):
         if self.command_list is not None and not callable(parser):
             raise CommandListError("%s not allowed in command list" % command)
@@ -141,28 +143,23 @@ class MPDProtocol(basic.LineReceiver):
         self.state.append(deferred)
         if parser is not None:
             deferred.addCallback(parser)
-            deferred.addCallback(self.wrap_iterator)
         
         if blocking:
-            running = True
+            finished = [None]
             def block_callback(data):
-                running = False
-                return data
+                print data
+                finished[0] = data
             deferred.addCallback(block_callback)
-            while running:
-                continue
-            return deferred.result
+            while not finished[0]:
+                reactor.iterate(0.5)
+            return finished[0]
         else:
             return deferred
-
-    def wrap_iterator(self, iterator):
-        if not self.iterate:
-            return list(iterator)
-        return iterator
     
     def write_command(self, command, args=[]):
         parts = [command]
         parts += ['"%s"' % escape(str(arg)) for arg in args]
+        print "sending", parts
         self.sendLine(" ".join(parts))
     
     def parse_pairs(self, lines, separator=": "):
@@ -186,10 +183,10 @@ class MPDProtocol(basic.LineReceiver):
         obj = {}
         for key, value in self.parse_pairs(lines):
             key = key.lower()
-            if key in delimiters:
+            if key in delimiters and obj:
                 yield obj
                 obj = {}
-            elif key in obj:
+            if key in obj:
                 if not isinstance(obj[key], list):
                     obj[key] = [obj[key], value]
                 else:
@@ -206,7 +203,7 @@ class MPDProtocol(basic.LineReceiver):
         return objs[0]
 
     def parse_item(self, lines):
-        objs = list(self.parse_pairs(lines))
+        pairs = list(self.parse_pairs(lines))
         if len(pairs) != 1:
             return
         return pairs[0][1]
@@ -217,7 +214,7 @@ class MPDProtocol(basic.LineReceiver):
     def parse_songs(self, lines):
         return self.parse_objects(lines, ["file"])
 
-    def parse_playlists(snelf, lines):
+    def parse_playlists(self, lines):
         return self.parse_objects(lines, ["playlist"])
 
     def parse_database(self, lines):
@@ -248,18 +245,20 @@ class MPDProtocol(basic.LineReceiver):
 
     def pop_and_call_parser(self):
         parser = self.state.pop(0)
-        parser(self.buffer)
+        parser.callback(self.buffer[:])
         self.buffer = []
 
     def lineReceived(self, line):
+        print "received", line
+        
         if line.startswith(HELLO_PREFIX):
             self.mpd_version = line[len(HELLO_PREFIX):].strip()
         
-        if line.startswith(ERROR_PREFIX):
+        elif line.startswith(ERROR_PREFIX):
             error = line[len(ERROR_PREFIX):].strip()
             raise CommandError(error)
         
-        if self.command_list:
+        elif self.command_list:
             if line == NEXT:
                 self.pop_and_call_parser()
             if line == SUCCESS:
@@ -270,14 +269,13 @@ class MPDProtocol(basic.LineReceiver):
         else:
             self.buffer.append(line)
 
+    def connectionMade(self):
+        self.factory.connectionMade.callback(self)
+
+class MPDFactory(protocol.ReconnectingClientFactory):
+    protocol = MPDProtocol
+
 def escape(text):
     return text.replace("\\", "\\\\").replace('"', '\\"')    
-
-class MPDFactory(protocol.ClientFactory):
-    
-    def buildProtocol(self, addr):
-        self.client = MPDProtocol()
-        self.client.factory = self
-        return self.client
 
 # vim: set expandtab shiftwidth=4 softtabstop=4 textwidth=79:
