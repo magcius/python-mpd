@@ -17,11 +17,16 @@
 # import socket
 from twisted.internet import protocol, reactor, defer
 from twisted.protocols import basic
-from twisted.python.log import startLogging
 
 import sys
 
-startLogging(sys.stdout)
+debug = False
+
+if "--debug" in sys.argv:
+    sys.argv.remove("--debug")
+    from twisted.python.log import startLogging
+    startLogging(sys.stdout)
+    debug = True
 
 HELLO_PREFIX = "OK MPD "
 ERROR_PREFIX = "ACK "
@@ -153,7 +158,8 @@ class MPDProtocol(basic.LineReceiver):
     def write_command(self, command, args=[]):
         parts = [command]
         parts += ['"%s"' % escape(str(arg)) for arg in args]
-        print "sending", parts
+        if debug:
+            print "sending", parts
         self.sendLine(" ".join(parts))
     
     def parse_pairs(self, lines, separator=": "):
@@ -243,7 +249,8 @@ class MPDProtocol(basic.LineReceiver):
         self.buffer = []
 
     def lineReceived(self, line):
-        print "received", line
+        if debug:
+            print "received", line
         if line.startswith(HELLO_PREFIX):
             self.mpd_version = line[len(HELLO_PREFIX):].strip()
         
