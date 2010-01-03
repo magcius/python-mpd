@@ -147,7 +147,6 @@ class MPDProtocol(basic.LineReceiver):
         if blocking:
             finished = [None]
             def block_callback(data):
-                print data
                 finished[0] = data
             deferred.addCallback(block_callback)
             while not finished[0]:
@@ -159,7 +158,6 @@ class MPDProtocol(basic.LineReceiver):
     def write_command(self, command, args=[]):
         parts = [command]
         parts += ['"%s"' % escape(str(arg)) for arg in args]
-        print "sending", parts
         self.sendLine(" ".join(parts))
     
     def parse_pairs(self, lines, separator=": "):
