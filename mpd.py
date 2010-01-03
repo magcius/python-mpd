@@ -249,8 +249,6 @@ class MPDProtocol(basic.LineReceiver):
         self.buffer = []
 
     def lineReceived(self, line):
-        print "received", line
-        
         if line.startswith(HELLO_PREFIX):
             self.mpd_version = line[len(HELLO_PREFIX):].strip()
         
