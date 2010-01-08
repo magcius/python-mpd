@@ -270,10 +270,17 @@ class MPDProtocol(basic.LineReceiver):
             self.buffer.append(line)
 
     def connectionMade(self):
-        self.factory.connectionMade.callback(self)
+        if callable(self.factory.connectionMade):
+            self.factory.connectionMade(self)
+
+    def connectionLost(self, reason):
+        if callable(self.factory.connectionLost):
+            self.factory.connectionLost(self, reason)
 
 class MPDFactory(protocol.ReconnectingClientFactory):
     protocol = MPDProtocol
+    connectionMade = None
+    connectionLost = None
 
 def escape(text):
     return text.replace("\\", "\\\\").replace('"', '\\"')    
